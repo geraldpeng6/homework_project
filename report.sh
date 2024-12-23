@@ -107,10 +107,23 @@ declare -a late_students
 # 扫描作业文件
 log "扫描作业文件"
 temp_file=$(mktemp)
-find "$HOMEWORK_DIR" -type f -iname "homework*" > "$temp_file"
+find "$HOMEWORK_DIR" -type f -exec bash -c '
+    filename=$(basename "$1")
+    # 去除特殊字符和空格,只保留字母和数字
+    clean_name=$(echo "$filename" | tr -cd "[:alnum:]" | tr "[:upper:]" "[:lower:]")
+    if [[ "$clean_name" =~ homework ]]; then
+        echo "$1"
+    fi
+' bash {} \; > "$temp_file"
 
 while IFS= read -r file; do
     filename=$(basename "$file")
+    # 去除特殊字符和空格,只保留字母和数字
+    filename=$(echo "$filename" | tr -cd "[:alnum:]" | tr "[:upper:]" "[:lower:]")
+    
+    # 在日志中打印处理后的文件名
+    log "处理后的文件名: $filename"
+    
     # 使用正则表达式提取学号
     if [[ "$filename" =~ homework([0-9]{1,2}) ]]; then
         student_id="${BASH_REMATCH[1]}"
@@ -156,6 +169,12 @@ log "未提交作业人数: $not_submitted_count"
 report_file="$OUTPUT_DIR/homework_report_$(date '+%Y%m%d%H%M%S').html"
 log "生成HTML报告: $report_file"
 
+# 对已提交的学生学号进行排序
+sorted_submitted_students=($(for student in "${!submitted_students[@]}"; do echo "$student"; done | sort -n))
+
+# 对未提交的学生学号进行排序
+sorted_not_submitted_students=($(for student in "${not_submitted_students[@]}"; do echo "$student"; done | sort -n))
+
 cat <<EOF > "$report_file"
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -184,7 +203,7 @@ cat <<EOF > "$report_file"
         <tr><th>学号</th><th>提交时间</th></tr>
 EOF
 
-for student in "${!submitted_students[@]}"; do
+for student in "${sorted_submitted_students[@]}"; do
     submit_ts=${submission_times[$student]}
     submit_time=$(date -d "@$submit_ts" "+%Y-%m-%d %H:%M:%S")
     if (( submit_ts > DEADLINE_TS )); then
@@ -200,11 +219,11 @@ cat <<EOF >> "$report_file"
     <h2>未提交作业的学生</h2>
 EOF
 
-if [ ${#not_submitted_students[@]} -eq 0 ]; then
+if [ ${#sorted_not_submitted_students[@]} -eq 0 ]; then
     echo "    <p>所有学生均已提交作业。</p>" >> "$report_file"
 else
     echo "    <ul>" >> "$report_file"
-    for student in "${not_submitted_students[@]}"; do
+    for student in "${sorted_not_submitted_students[@]}"; do
         echo "        <li>学号: $student</li>" >> "$report_file"
     done
     echo "    </ul>" >> "$report_file"
