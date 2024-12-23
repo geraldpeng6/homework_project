@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# generate_homework_files.sh
-# 用于在指定目录下随机生成1-50个作业文件，文件名格式为 homeworkXX
+# generate.sh
+# 用于在指定目录下随机生成1-25个作业文件，文件名格式为 homeworkXX
 
 # 默认配置
 DEFAULT_HOMEWORK_DIR="/homework"
@@ -53,6 +53,14 @@ if [ ! -d "$HOMEWORK_DIR" ]; then
         exit 1
     fi
     log "Created directory: $HOMEWORK_DIR"
+fi
+
+# 增加对作业目录的读写权限
+chmod u+rw "$HOMEWORK_DIR"
+if [ $? -ne 0 ]; then
+    echo "Error: 无法增加目录 $HOMEWORK_DIR 的读写权限"
+    log "Failed to set read/write permissions for directory: $HOMEWORK_DIR"
+    exit 1
 fi
 
 # 检查作业目录的写权限

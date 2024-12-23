@@ -33,8 +33,8 @@ log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') : $message" >> "$LOG_FILE"
 }
 
-# 检查并创建目录
-check_create_dir() {
+# 检查并创建目录的函数
+check_and_create_dir() {
     local dir="$1"
     if [ ! -d "$dir" ]; then
         mkdir -p "$dir" 2>/dev/null
@@ -47,8 +47,19 @@ check_create_dir() {
     fi
 }
 
-# 检查权限
-check_permissions() {
+# 设置目录权限的函数
+set_dir_permissions() {
+    local dir="$1"
+    chmod u+rw "$dir"
+    if [ $? -ne 0 ]; then
+        echo "Error: 无法增加目录 $dir 的读写权限"
+        log "Failed to set read/write permissions for directory: $dir"
+        exit 1
+    fi
+}
+
+# 检查目录读取权限的函数
+check_read_permissions() {
     local dir="$1"
     if [ ! -r "$dir" ]; then
         echo "Error: 没有读取目录 $dir 的权限"
@@ -74,11 +85,15 @@ HOMEWORK_DIR=${HOMEWORK_DIR:-$DEFAULT_HOMEWORK_DIR}
 OUTPUT_DIR=${OUTPUT_DIR:-$DEFAULT_REPORT_DIR}
 
 # 检查并创建作业目录和报告输出目录
-check_create_dir "$HOMEWORK_DIR"
-check_create_dir "$OUTPUT_DIR"
+check_and_create_dir "$HOMEWORK_DIR"
+check_and_create_dir "$OUTPUT_DIR"
 
-# 检查作业目录的取权限
-check_permissions "$HOMEWORK_DIR"
+# 设置作业目录和报告输出目录的权限
+set_dir_permissions "$HOMEWORK_DIR"
+set_dir_permissions "$OUTPUT_DIR"
+
+# 检查作业目录的读取权限
+check_read_permissions "$HOMEWORK_DIR"
 
 log "脚本开始执行"
 log "作业目录: $HOMEWORK_DIR"
